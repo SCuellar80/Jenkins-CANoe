@@ -29,23 +29,26 @@ pipeline {
                     echo "NEW_RELEASE_PROCESSED : ${env.NEW_RELEASE_PROCESSED}"
                 }
             }
+            steps {
+                script {
+                        stage("Release: ${env.NEW_RELEASE_NAME}") {
+                        }
+                }
+            }
         }
 
-        stage("Flash New Release: ${env.NEW_RELEASE_NAME}") {
+        stage('Flashing') {
             when {
                 expression {
                     return env.NEW_RELEASE_PROCESSED == 'Pending'
                 }
             }
-
             steps {
-                script {
-                    echo "Reflasheando ${env.NEW_RELEASE_FILEPATH}"
-                    echo 'Esperando 30 minutos...'
-                    sleep(time: 30, unit: 'SECONDS')
-                }
+                echo "Reflasheando ${env.NEW_RELEASE_FILEPATH}"
+                echo 'Esperando 30 minutos...'
+                sleep(time: 30, unit: 'SECONDS')
             }
-        }
+
 
         stage('Update JSON') {
             when {
