@@ -10,7 +10,7 @@ pipeline {
     environment {
         RELEASE_FOLDER = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases'
         STATE_FOLDER = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastFlashed'
-        STATE_FILE = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastFlashed\\last_flashed.json'
+        STATE_FILE = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastFlashed\\last_release.json'
     }
 
     stages {
@@ -39,9 +39,9 @@ pipeline {
                             pretty: 4
                         )
 
-                        echo 'last_flashed.json creado correctamente.'
+                        echo 'last_release.json creado correctamente.'
                     } else {
-                        echo 'last_flashed.json ya existe.'
+                        echo 'last_release.json ya existe.'
                     }
                 }
             }
@@ -131,7 +131,7 @@ pipeline {
                                 NEW_RELEASE_PROCESSED   : 'Pending'
                             ]
 
-                            // Actualizar last_flashed.json.
+                            // Actualizar last_release.json.
                             writeJSON(
                                 file: env.STATE_FILE,
                                 json: newState,
