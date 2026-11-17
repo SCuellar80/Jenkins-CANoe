@@ -13,7 +13,7 @@ pipeline {
 
     stages {
 
-        stage('Read Last Flashed') {
+        stage('Read Last Release') {
             steps {
                 script {
                     def releaseData = readJSON file: env.JSON_PATH
@@ -27,12 +27,10 @@ pipeline {
                     echo "NEW_RELEASE_NAME      : ${env.NEW_RELEASE_NAME}"
                     echo "NEW_RELEASE_DATE      : ${env.NEW_RELEASE_DATE}"
                     echo "NEW_RELEASE_PROCESSED : ${env.NEW_RELEASE_PROCESSED}"
-                }
-            }
-            steps {
-                script {
-                        stage("Release: ${env.NEW_RELEASE_NAME}") {
-                        }
+
+                    stage("Rel: ${env.NEW_RELEASE_NAME}") {
+                        echo "Release seleccionado: ${env.NEW_RELEASE_NAME}"
+                    }
                 }
             }
         }
@@ -43,12 +41,13 @@ pipeline {
                     return env.NEW_RELEASE_PROCESSED == 'Pending'
                 }
             }
+
             steps {
                 echo "Reflasheando ${env.NEW_RELEASE_FILEPATH}"
                 echo 'Esperando 30 minutos...'
                 sleep(time: 30, unit: 'SECONDS')
             }
-
+        }
 
         stage('Update JSON') {
             when {
