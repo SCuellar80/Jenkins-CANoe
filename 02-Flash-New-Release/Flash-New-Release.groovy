@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -7,7 +6,7 @@ pipeline {
     }
 
     environment {
-        JSON_PATH = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastFlashed\\last_flashed.json'
+        JSON_PATH = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastRelease\\last_release.json'
 
         RELEASES_PATH = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases'
     }
