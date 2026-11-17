@@ -28,9 +28,9 @@ pipeline {
                     // Crear el JSON si no existe.
                     if (!fileExists(env.STATE_FILE)) {
                         def initialState = [
-                            NEW_RELEASE_NAME    : null,
-                            NEW_RELEASE_DATE    : null,
-                            NEW_RELEASE_FLASHED : null
+                            NEW_RELEASE_NAME        : null,
+                            NEW_RELEASE_DATE        : null,
+                            NEW_RELEASE_PROCESSED   : null
                         ]
 
                         writeJSON(
@@ -56,21 +56,24 @@ pipeline {
                         returnPojo: true
                     )
 
+                    // CORRECCIÓN: Pasar la fecha del último release a PowerShell.
+                    env.LAST_RELEASE_DATE = lastFlashed.NEW_RELEASE_DATE ?: ''
+
                     // Validar el contenido del JSON.
                     def validStates = ['Yes', 'Pending']
 
-                    if (lastFlashed.NEW_RELEASE_FLASHED != null &&
-                        !validStates.contains(lastFlashed.NEW_RELEASE_FLASHED)) {
-                        error('NEW_RELEASE_FLASHED contiene un estado no válido.')
+                    if (lastFlashed.NEW_RELEASE_PROCESSED != null &&
+                        !validStates.contains(lastFlashed.NEW_RELEASE_PROCESSED)) {
+                        error('NEW_RELEASE_PROCESSED contiene un estado no válido.')
                     }
 
                     // No avanzar mientras el release anterior esté pendiente.
-                    if (lastFlashed.NEW_RELEASE_FLASHED == 'Pending') {
+                    if (lastFlashed.NEW_RELEASE_PROCESSED == 'Pending') {
                         echo """
                         Release pendiente de flashear:
-                        NEW_RELEASE_NAME    : ${lastFlashed.NEW_RELEASE_NAME}
-                        NEW_RELEASE_DATE    : ${lastFlashed.NEW_RELEASE_DATE}
-                        NEW_RELEASE_FLASHED : ${lastFlashed.NEW_RELEASE_FLASHED}
+                        NEW_RELEASE_NAME        : ${lastFlashed.NEW_RELEASE_NAME}
+                        NEW_RELEASE_DATE        : ${lastFlashed.NEW_RELEASE_DATE}
+                        NEW_RELEASE_PROCESSED   : ${lastFlashed.NEW_RELEASE_PROCESSED}
 
                         No se buscarán releases adicionales.
                         """
@@ -123,9 +126,9 @@ pipeline {
 
                             // Preparar el nuevo estado.
                             def newState = [
-                                NEW_RELEASE_NAME    : candidate.NEW_RELEASE_NAME,
-                                NEW_RELEASE_DATE    : candidate.NEW_RELEASE_DATE,
-                                NEW_RELEASE_FLASHED : 'Pending'
+                                NEW_RELEASE_NAME        : candidate.NEW_RELEASE_NAME,
+                                NEW_RELEASE_DATE        : candidate.NEW_RELEASE_DATE,
+                                NEW_RELEASE_PROCESSED   : 'Pending'
                             ]
 
                             // Actualizar last_flashed.json.
@@ -138,9 +141,9 @@ pipeline {
                             echo """
                             Nuevo release encontrado:
 
-                            NEW_RELEASE_NAME    : ${newState.NEW_RELEASE_NAME}
-                            NEW_RELEASE_DATE    : ${newState.NEW_RELEASE_DATE}
-                            NEW_RELEASE_FLASHED : ${newState.NEW_RELEASE_FLASHED}
+                            NEW_RELEASE_NAME        : ${newState.NEW_RELEASE_NAME}
+                            NEW_RELEASE_DATE        : ${newState.NEW_RELEASE_DATE}
+                            NEW_RELEASE_PROCESSED   : ${newState.NEW_RELEASE_PROCESSED}
                             """
                         } else {
                             echo 'No se encontraron releases nuevos.'
