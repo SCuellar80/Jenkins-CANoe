@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -9,8 +8,8 @@ pipeline {
 
     environment {
         RELEASE_FOLDER = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases'
-        STATE_FOLDER = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastFlashed'
-        STATE_FILE = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastFlashed\\last_release.json'
+        STATE_FOLDER = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastRelease'
+        STATE_FILE = 'C:\\Users\\copca\\OneDrive\\Trainings\\CICD\\CICD with CANoe\\SoftwareReleases\\LastRelease\\last_release.json'
     }
 
     stages {
