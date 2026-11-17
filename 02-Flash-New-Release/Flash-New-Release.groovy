@@ -31,7 +31,7 @@ pipeline {
             }
         }
 
-        stage('Flash New Release: ${env.NEW_RELEASE_NAME}') {
+        stage("Flash New Release: ${env.NEW_RELEASE_NAME}") {
             when {
                 expression {
                     return env.NEW_RELEASE_PROCESSED == 'Pending'
