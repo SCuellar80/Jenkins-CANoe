@@ -1,3 +1,5 @@
+def lastFlashed
+
 pipeline {
     agent any
 
@@ -61,7 +63,7 @@ pipeline {
             steps {
                 script {
                     // Leer el estado actual.
-                    def lastFlashed = readJSON(
+                        lastFlashed = readJSON(
                         file: env.STATE_FILE,
                         returnPojo: true
                     )
@@ -80,7 +82,7 @@ pipeline {
             when {
                 expression {
                     // Buscará sólo sí es primera vez (null) o sí ya fue procesado
-                    lastFlashed.NEW_RELEASE_PROCESSED != null || lastFlashed.NEW_RELEASE_PROCESSED != 'Yes'
+                    lastFlashed.NEW_RELEASE_PROCESSED == null || lastFlashed.NEW_RELEASE_PROCESSED == 'Yes'
                 }
             }
 
