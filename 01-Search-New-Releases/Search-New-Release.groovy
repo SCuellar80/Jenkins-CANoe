@@ -14,33 +14,63 @@ pipeline {
 
     stages {
 
-        stage('Initialize Last Flashed') {
+        stage('Create Folder') {
+            when {
+                expression {
+                    // Creará el folder sí no existe
+                    fileExists(env.STATE_FOLDER) == false
+                }
+            }
+
+            steps {
+                powershell '''
+                    if (!(Test-Path -LiteralPath $env:STATE_FOLDER -PathType Container)) {
+                        New-Item -ItemType Directory -Path $env:STATE_FOLDER -Force -ErrorAction Stop | Out-Null
+                    }
+                '''
+                echo 'LastRelease creado correctamente.'
+            }
+        }
+
+        stage('Create JSON') {
+            when {
+                expression {
+                    // Crear el JSON si no existe.
+                    fileExists(env.STATE_FILE) == false
+                }
+            }
+
             steps {
                 script {
-                    // Crear la carpeta si no existe.
-                    powershell '''
-                        if (!(Test-Path -LiteralPath $env:STATE_FOLDER -PathType Container)) {
-                            New-Item -ItemType Directory -Path $env:STATE_FOLDER -Force -ErrorAction Stop | Out-Null
-                        }
-                    '''
+                    def initialState = [
+                        NEW_RELEASE_NAME        : null,
+                        NEW_RELEASE_DATE        : null,
+                        NEW_RELEASE_PROCESSED   : null
+                    ]
+                    writeJSON(
+                        file: env.STATE_FILE,
+                        json: initialState,
+                        pretty: 4
+                    )
+                    echo 'last_release.json creado correctamente.'
+                }
+            }
+        }
 
-                    // Crear el JSON si no existe.
-                    if (!fileExists(env.STATE_FILE)) {
-                        def initialState = [
-                            NEW_RELEASE_NAME        : null,
-                            NEW_RELEASE_DATE        : null,
-                            NEW_RELEASE_PROCESSED   : null
-                        ]
+        stage('Read JSON') {
+            steps {
+                script {
+                    // Leer el estado actual.
+                    def lastFlashed = readJSON(
+                        file: env.STATE_FILE,
+                        returnPojo: true
+                    )
 
-                        writeJSON(
-                            file: env.STATE_FILE,
-                            json: initialState,
-                            pretty: 4
-                        )
-
-                        echo 'last_release.json creado correctamente.'
-                    } else {
-                        echo 'last_release.json ya existe.'
+                    stage("Name: ${lastFlashed.NEW_RELEASE_NAME}") {
+                        echo "Último Release: ${lastFlashed.NEW_RELEASE_NAME}"
+                    }
+                    stage("Status: ${lastFlashed.NEW_RELEASE_PROCESSED}") {
+                        echo "Último Release: ${lastFlashed.NEW_RELEASE_PROCESSED}"
                     }
                 }
             }
