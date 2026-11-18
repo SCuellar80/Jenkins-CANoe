@@ -77,14 +77,15 @@ pipeline {
         }
 
         stage('Search New Release') {
+            when {
+                expression {
+                    // Buscará sólo sí es primera vez (null) o sí ya fue procesado
+                    lastFlashed.NEW_RELEASE_PROCESSED != null || lastFlashed.NEW_RELEASE_PROCESSED != 'Yes'
+                }
+            }
+
             steps {
                 script {
-                    // Leer el estado actual.
-                    def lastFlashed = readJSON(
-                        file: env.STATE_FILE,
-                        returnPojo: true
-                    )
-
                     // CORRECCIÓN: Pasar la fecha del último release a PowerShell.
                     env.LAST_RELEASE_DATE = lastFlashed.NEW_RELEASE_DATE ?: ''
 
