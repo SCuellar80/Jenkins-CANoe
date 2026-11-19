@@ -1,4 +1,5 @@
-def lastFlashed
+def lastFlashed         //to read last JSON data
+def searchOutput = ''   //Returns file data string (to be converted to JSON) after found a new release
 
 pipeline {
     agent any
@@ -68,11 +69,17 @@ pipeline {
                         returnPojo: true
                     )
 
-                    stage("Name: ${lastFlashed.NEW_RELEASE_NAME}") {
-                        echo "Último Release: ${lastFlashed.NEW_RELEASE_NAME}"
+                    echo """
+                    NEW_RELEASE_NAME        : ${lastFlashed.NEW_RELEASE_NAME}
+                    NEW_RELEASE_DATE        : ${lastFlashed.NEW_RELEASE_DATE}
+                    NEW_RELEASE_PROCESSED   : ${lastFlashed.NEW_RELEASE_PROCESSED}
+                    """
+
+                    stage("Current: ${lastFlashed.NEW_RELEASE_NAME}") {
+                        echo "NEW_RELEASE_NAME: ${lastFlashed.NEW_RELEASE_NAME}"
                     }
-                    stage("Status: ${lastFlashed.NEW_RELEASE_PROCESSED}") {
-                        echo "Último Release: ${lastFlashed.NEW_RELEASE_PROCESSED}"
+                    stage("Next: ${lastFlashed.NEW_RELEASE_PROCESSED}") {
+                        echo "NEW_RELEASE_PROCESSED: ${lastFlashed.NEW_RELEASE_PROCESSED}"
                     }
                 }
             }
@@ -91,96 +98,89 @@ pipeline {
                     // CORRECCIÓN: Pasar la fecha del último release a PowerShell.
                     env.LAST_RELEASE_DATE = lastFlashed.NEW_RELEASE_DATE ?: ''
 
-                    // Validar el contenido del JSON.
-                    def validStates = ['Yes', 'Pending']
+                    // Buscar el siguiente release cronológicamente.
+                    searchOutput = powershell(
+                    returnStdout: true,
+                    script: '''
+                        $releaseFolder = $env:RELEASE_FOLDER
 
-                    if (lastFlashed.NEW_RELEASE_PROCESSED != null &&
-                        !validStates.contains(lastFlashed.NEW_RELEASE_PROCESSED)) {
-                        error('NEW_RELEASE_PROCESSED contiene un estado no válido.')
-                    }
+                        $releases = @(
+                            Get-ChildItem -LiteralPath $releaseFolder -File -Filter '*.bin' |
+                            Sort-Object LastWriteTime, Name
+                        )
 
-                    // No avanzar mientras el release anterior esté pendiente.
-                    if (lastFlashed.NEW_RELEASE_PROCESSED == 'Pending') {
-                        echo """
-                        Release pendiente de flashear:
-                        NEW_RELEASE_NAME        : ${lastFlashed.NEW_RELEASE_NAME}
-                        NEW_RELEASE_DATE        : ${lastFlashed.NEW_RELEASE_DATE}
-                        NEW_RELEASE_PROCESSED   : ${lastFlashed.NEW_RELEASE_PROCESSED}
-
-                        No se buscarán releases adicionales.
-                        """
-                        env.RELEASE_PENDING = 'true'
-                    } else {
-
-                        // Buscar el siguiente release cronológicamente.
-                        def searchOutput = powershell(
-                            returnStdout: true,
-                            script: '''
-                                $releaseFolder = $env:RELEASE_FOLDER
-
-                                $releases = @(
-                                    Get-ChildItem -LiteralPath $releaseFolder -File -Filter '*.bin' |
-                                    Sort-Object LastWriteTime, Name
-                                )
-
-                                if ($env:LAST_RELEASE_DATE) {
-                                    $lastDate = [DateTimeOffset]::Parse(
-                                        $env:LAST_RELEASE_DATE
-                                    )
-
-                                    $releases = @(
-                                        $releases | Where-Object {
-                                            [DateTimeOffset]::Parse(
-                                                $_.LastWriteTime.ToString('o')
-                                            ) -gt $lastDate
-                                        }
-                                    )
-                                }
-
-                                if ($releases.Count -gt 0) {
-                                    $candidate = $releases[0]
-
-                                    [PSCustomObject]@{
-                                        NEW_RELEASE_NAME = $candidate.Name
-                                        NEW_RELEASE_DATE = $candidate.LastWriteTime.ToString('o')
-                                    } | ConvertTo-Json -Compress
-                                }
-                            '''
-                        ).trim()
-
-                        if (searchOutput) {
-
-                            // Leer el resultado de PowerShell.
-                            def candidate = readJSON(
-                                text: searchOutput,
-                                returnPojo: true
+                        if ($env:LAST_RELEASE_DATE) {
+                            $lastDate = [DateTimeOffset]::Parse(
+                                $env:LAST_RELEASE_DATE
                             )
 
-                            // Preparar el nuevo estado.
-                            def newState = [
-                                NEW_RELEASE_NAME        : candidate.NEW_RELEASE_NAME,
-                                NEW_RELEASE_DATE        : candidate.NEW_RELEASE_DATE,
-                                NEW_RELEASE_PROCESSED   : 'Pending'
-                            ]
-
-                            // Actualizar last_release.json.
-                            writeJSON(
-                                file: env.STATE_FILE,
-                                json: newState,
-                                pretty: 4
+                            $releases = @(
+                                $releases | Where-Object {
+                                    [DateTimeOffset]::Parse(
+                                        $_.LastWriteTime.ToString('o')
+                                    ) -gt $lastDate
+                                }
                             )
-
-                            echo """
-                            Nuevo release encontrado:
-
-                            NEW_RELEASE_NAME        : ${newState.NEW_RELEASE_NAME}
-                            NEW_RELEASE_DATE        : ${newState.NEW_RELEASE_DATE}
-                            NEW_RELEASE_PROCESSED   : ${newState.NEW_RELEASE_PROCESSED}
-                            """
-                        } else {
-                            echo 'No se encontraron releases nuevos.'
                         }
+
+                        if ($releases.Count -gt 0) {
+                            $candidate = $releases[0]
+
+                            [PSCustomObject]@{
+                                NEW_RELEASE_NAME = $candidate.Name
+                                NEW_RELEASE_DATE = $candidate.LastWriteTime.ToString('o')
+                            } | ConvertTo-Json -Compress
+                        }
+                    '''
+                    ).trim()
+
+                    //Sí no encuentra release nuevo, lo escribe en la consola
+                    if (!searchOutput) {
+                        echo "No new release found!"
                     }
+                    else {
+                        echo "Release found!: $searchOutput"
+                    }
+                }
+            }
+        }
+
+        stage('Update JSON') {
+            when {
+                expression {
+                    // Actulizará datos sí searchOutput no está vacío
+                    searchOutput != ''
+                }
+            }
+
+            steps {
+                script {
+                    // convierte el searchOutput (string de datos) a JSON
+                    def candidate = readJSON(
+                        text: searchOutput,
+                        returnPojo: true
+                    )
+
+                    // Preparar el nuevo estado.
+                    def newState = [
+                        NEW_RELEASE_NAME        : candidate.NEW_RELEASE_NAME,
+                        NEW_RELEASE_DATE        : candidate.NEW_RELEASE_DATE,
+                        NEW_RELEASE_PROCESSED   : 'Pending'
+                    ]
+
+                    // Actualizar last_release.json.
+                    writeJSON(
+                        file: env.STATE_FILE,
+                        json: newState,
+                        pretty: 4
+                    )
+
+                    echo """
+                    Nuevo release encontrado:
+                    NEW_RELEASE_NAME        : ${newState.NEW_RELEASE_NAME}
+                    NEW_RELEASE_DATE        : ${newState.NEW_RELEASE_DATE}
+                    NEW_RELEASE_PROCESSED   : ${newState.NEW_RELEASE_PROCESSED}
+                    """
                 }
             }
         }
